@@ -70,6 +70,8 @@ binaries baked into the unikernel _in the order they were specified at bake
 time_, with _argv[0]_ set to the name of the binary specified at bake time and
 _runmode_ set to the default value (run in foreground).
 
+For MirageOS unikernels, the _bin_ argument is meaningless, as is _runmode_.  _argv[]_ could potentially be passed to a running unikernel, although currently this is not supported in the MirageOS build system.
+
 ## env: Environment variables
 
     "env": {
@@ -80,11 +82,15 @@ _runmode_ set to the default value (run in foreground).
 * _env_: Each _key_/_value_ pair of strings sets the environment variable
   `<key>` to `<value>`.
 
+MirageOS currently supports setting keys to values and passing these to unikernels.  Such values don't appear as environment variables to the running unikernel, but they could.
+
 ## hostname: Kernel hostname
 
     "hostname": <string>
 
 * _hostname_: Sets the hostname returned by the `gethostname()` call.
+
+Hostnames are generally not meaningful in the MirageOS context; even in the case where they're assigned in a DHCP lease they're thrown away.  Generally this would be ignored by us.
 
 ## net: Network configuration
 
@@ -131,6 +137,10 @@ _runmode_ set to the default value (run in foreground).
     name resolution. (Maximum 3 strings, _Optional_)
   * _search_: A list of domain suffixes to search when resolving unqualified
     names. (Maximum 6 strings, _Optional_)
+
+"name" would be ignored by MirageOS unikernels.
+
+What about the interaction of _dns_, _gateways_, and DHCP leases?  The lease often contains information that overwrites this, and it's usually a good idea to listen (at least for gateways).
 
 ### IPv4 configuration
 
@@ -184,6 +194,12 @@ Gateways to be configured using IPv6 are specified as follows:
 
 * _addr_: The IPv6 address of the default gateway.
 
+Is inet meant here instead of inet6?
+
+Something like "inet6": { "method": <string>, "configuration":<method-specific configuration> } would be a bit less context-sensitive.
+
+This higher-level specification for network interfaces seems generally OK to me.
+
 ## blk: Block devices
 
     "blk": {
@@ -200,6 +216,8 @@ Configures a block device:
 * _name_: The name of the block device to be configured in `/dev`.
 * _type_: One of `etfs` or `vnd`.
 * _path_: Type-specific, see below.
+
+We don't have any conception of mount points or a larger unifying filesystem abstraction in MirageOS unikernels, so all of the semantics around this in the config would be ignored, as would any "mount" block.
 
 ### etfs: Block device backed by rump_etfs host device
 
@@ -224,6 +242,8 @@ A _type_ of `vnd` configures the block device `/dev/<name>` as a loop-back
 device backed by the file specified by _path_, using the vnode disk driver. 
 
 _name_ must be specified as `vnd<unit>`, for example: `vnd0`.
+
+No support for these in MirageOS.
 
 ## mount: Mount filesystems
 
@@ -251,6 +271,8 @@ _path_ on _mountpoint_.
 The following filesystem types will be tried in succession: `ffs`, `ext2fs` and
 `cd9660`. If the filesystem is not one of the supported types, configuration
 will fail.
+
+The implicit filesystem specification here will be a problem for unikernels.  We don't want to compile in support for every possible filesystem and then try them in order; it would be much better to specify which filesystem we expect to see, along with any parameters (e.g. superblock locations for ext2).
 
 ### kernfs: Virtual kernel filesystem
 
